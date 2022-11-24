@@ -92,4 +92,26 @@
     <bean id="visitQueueEntryDao" class="org.openmrs.module.queue.api.dao.impl.VisitQueueEntryDaoImpl">
         <constructor-arg ref="sessionFactory"/>
     </bean>
+    <bean id="queue.QueueClinicService"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="target">
+            <bean class="org.openmrs.module.queue.api.impl.QueueClinicServiceImpl">
+                <property name="dao" ref="queueClinicDao"/>
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors"/>
+        <property name="transactionAttributeSource" ref="transactionAttributeSource"/>
+    </bean>
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list>
+                <value>org.openmrs.module.queue.api.QueueClinicService</value>
+                <ref bean="queue.QueueClinicService"/>
+            </list>
+        </property>
+    </bean>
+    <bean id="queueClinicDao" class="org.openmrs.module.queue.api.dao.impl.QueueClinicDaoImpl">
+        <constructor-arg ref="sessionFactory"/>
+    </bean>
 </beans>
