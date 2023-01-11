@@ -1,7 +1,7 @@
 name: deploying to prod 8600
 on:
   push:
-    branches: [master ]
+    branches: [main]
 jobs:
 
   build:
