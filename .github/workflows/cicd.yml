@@ -1,7 +1,7 @@
 name: deploying to prod 8600
 on:
   push:
-    branches: [main]
+    branches: [clinic-queue]
 jobs:
 
   build:
@@ -23,7 +23,7 @@ jobs:
           sudo chown -R cicd2:cicd2 openmrs-module-queue
           git config --global --add safe.directory /apps/github-workflows/kenyaemr-modules/openmrs-module-openmrs-module-queue
           cd /apps/github-workflows/kenyaemr-modules/openmrs-module-queue
-          git clone -b main https://github.com/palladiumkenya/openmrs-module-queue.git .
+          git clone -b clinic-queue https://github.com/palladiumkenya/openmrs-module-queue.git .
           git status
           mvn clean install -DskipTests
           sudo rm -rf /var/lib/OpenMRS/modules/queue-*.omod
