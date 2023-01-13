@@ -13,7 +13,7 @@ OpenMRS Queue Module (backend)
   - Specifically REST web services
 - Java 8 or higher
 
-## Configurations
+## Configurations :
 
 After installing the queue module, configure the following GPs according to your implementation needs. Note that this is a
 necessary step, no defaults are provided.
