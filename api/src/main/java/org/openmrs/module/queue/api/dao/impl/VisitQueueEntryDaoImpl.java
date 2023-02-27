@@ -10,12 +10,14 @@
 package org.openmrs.module.queue.api.dao.impl;
 
 import static org.hibernate.criterion.Restrictions.and;
+import static org.hibernate.criterion.Restrictions.eq;
 
 import java.util.Collection;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Criteria;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.Subqueries;
@@ -38,42 +40,48 @@ public class VisitQueueEntryDaoImpl extends AbstractBaseQueueDaoImpl<VisitQueueE
 	 */
 	@Override
 	public Collection<VisitQueueEntry> findVisitQueueEntriesByConceptStatusAndConceptService(String conceptStatus,
-	        String conceptService, ConceptNameType conceptNameType, boolean localePreferred) {
-		return handleVisitQueueEntriesByStatusAndServiceCriteria(conceptStatus, conceptService, conceptNameType,
-		    localePreferred).list();
+	        String conceptService, ConceptNameType conceptNameType, boolean localePreferred, String locationUuid) {
+		return handleVisitQueueEntriesByLocationStatusAndServiceCriteria(conceptStatus, conceptService, conceptNameType,
+		    localePreferred, locationUuid).list();
 	}
 	
 	@Override
-	public Long getVisitQueueEntriesCountByStatusAndService(String conceptStatus, String conceptService,
-	        ConceptNameType conceptNameType, boolean localePreferred) {
-		Criteria criteria = handleVisitQueueEntriesByStatusAndServiceCriteria(conceptStatus, conceptService, conceptNameType,
-		    localePreferred);
+	public Long getVisitQueueEntriesCountByLocationStatusAndService(String conceptStatus, String conceptService,
+	        ConceptNameType conceptNameType, boolean localePreferred, String locationUuid) {
+		Criteria criteria = handleVisitQueueEntriesByLocationStatusAndServiceCriteria(conceptStatus, conceptService,
+		    conceptNameType, localePreferred, locationUuid);
 		criteria.setProjection(Projections.rowCount());
 		return (Long) criteria.uniqueResult();
 	}
 	
-	private Criteria handleVisitQueueEntriesByStatusAndServiceCriteria(String conceptStatus, String conceptService,
-	        ConceptNameType conceptNameType, boolean localePreferred) {
+	private Criteria handleVisitQueueEntriesByLocationStatusAndServiceCriteria(String conceptStatus, String conceptService,
+	        ConceptNameType conceptNameType, boolean localePreferred, String locationUuid) {
 		Criteria criteriaVisitQueueEntries = getCurrentSession().createCriteria(VisitQueueEntry.class, "_vqe");
 		includeVoidedObjects(criteriaVisitQueueEntries, false);
-		Criteria criteriaQueueEntries = criteriaVisitQueueEntries.createCriteria("_vqe.queueEntry", "_qe");
+		Criteria criteriaQueueEntries = criteriaVisitQueueEntries.createCriteria("_vqe.queueEntry", "_qe")
+		        .addOrder(Order.desc("_qe.sortWeight")).addOrder(Order.asc("_qe.startedAt"));
 		Criteria criteriaQueue = criteriaQueueEntries.createCriteria("_qe.queue", "_q");
-		criteriaQueue.add(Restrictions.and(Restrictions.isNull("_qe.endedAt"), Restrictions.isNotNull("_qe.startedAt")));
+		Criteria criteriaQueueLocation = criteriaQueue.createCriteria("_q.location", "_ql");
+		criteriaQueueLocation
+		        .add(Restrictions.and(Restrictions.isNull("_qe.endedAt"), Restrictions.isNotNull("_qe.startedAt")));
+		if (locationUuid != null) {
+			criteriaQueueLocation.add(eq("_ql.uuid", locationUuid));
+		}
 		
 		if (conceptStatus != null && conceptService != null) {
-			criteriaQueue.add(and(
+			criteriaQueueLocation.add(and(
 			    Subqueries.propertiesIn(new String[] { "_qe.status" },
 			        conceptByNameDetachedCriteria(conceptStatus, localePreferred, conceptNameType)),
 			    Subqueries.propertiesIn(new String[] { "_q.service" },
 			        conceptByNameDetachedCriteria(conceptService, localePreferred, conceptNameType))));
 		} else if (conceptStatus != null) {
-			criteriaQueue.add(Subqueries.propertiesIn(new String[] { "_qe.status" },
+			criteriaQueueLocation.add(Subqueries.propertiesIn(new String[] { "_qe.status" },
 			    conceptByNameDetachedCriteria(conceptStatus, localePreferred, conceptNameType)));
 		} else if (conceptService != null) {
-			criteriaQueue.add(Subqueries.propertiesIn(new String[] { "_q.service" },
+			criteriaQueueLocation.add(Subqueries.propertiesIn(new String[] { "_q.service" },
 			    conceptByNameDetachedCriteria(conceptService, localePreferred, conceptNameType)));
 		}
 		
-		return criteriaQueue;
+		return criteriaQueueLocation;
 	}
 }
